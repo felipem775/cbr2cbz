@@ -1,6 +1,8 @@
-#!/usr/bin/bash
+#!/bin/bash
 # convert cbr (rar) to cbz (zip)
-# by klaatu
+# by klaatu https://gitlab.com/notklaatu/cbr2cbz
+# by userlinux http://www.userlinux.net/1480_convertir_cbr_en_cbz_cbr2cbz_sh.html
+# by felipem https://felipem.com
 VERSION=0.2
 ####
 # DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
@@ -27,31 +29,35 @@ help() {
 }
 
 version_return() {
-    ## this function pings the website to check current version
-    ## and alerts the user if an upgrade is available
-
-    # echo "Checking for upgrade..."
-    # UPGRADE=$(curl --connect-timeout 10 -s slackermedia.info/sport/index.html | grep VERSIONCHECK= | cut -f2 -d"=" )
-
-    # if [ "X$VERSION" != "X$UPGRADE" ]; then
-	# echo "An upgrade of Slackport is available."
-    # else
 	echo "$VERSION"
-    #fi
+  echo ""
+}
+file_cbr2cbz() {
 
-    echo ""
+  FILENAM="$(basename "${FILE}" .cbr)"
+  echo "${FILENAM}"
+
+  CWD=$(pwd)
+
+  mkdir /tmp/cbr2cbz || exit 1
+
+  # 7z problems with Method = m3:19,
+  unrar e "${FILE}" -o /tmp/cbr2cbz
+  pushd /tmp/cbr2cbz
+  zip -q "${FILENAM}.cbz" *
+  echo "${FILENAM}.cbz created"
+  mv -v "${FILENAM}.cbz" $CWD
+  popd
+
+  rm -rf /tmp/cbr2cbz
+  echo "Conversion Complete."
 }
 
-
 while [ True ]; do
-if [ "$1" = "help" -o "$1" = "--help" -o "$1" = "-h" -o "$1" = "" ]; then 
+if [ "$1" = "help" -o "$1" = "--help" -o "$1" = "-h" -o "$1" = "" ]; then
     help
     shift 1
-#elif [ "$1" = "install" -o "$1" = "--install" -o "$1" = "-i" -o "$1" = "i" ]; then 
-#    MODE=installmode
-#    INSTALLER=${INSTALLER:-installpkg}
-#    shift 1
-elif [ "$1" = "version" -o "$1" = "--version" -o "$1" = "-v" -o "$1" = "v" ]; then     
+elif [ "$1" = "version" -o "$1" = "--version" -o "$1" = "-v" -o "$1" = "v" ]; then
     echo "cbr2cbz version "
     version_return
     shift 1
@@ -61,24 +67,18 @@ fi
 done
 
 # everything else left at this point
-# SHOULD be a package name, so..
-# build an array of packages
-ARG="${@}"
-set -e 
+# SHOULD be a package name or dir
+set -e
 
-FILENAM="$(basename "${ARG}" .cbr)"
-echo "${FILENAM}"
-
-CWD=$(pwd)
-
-mkdir cbr2tmp || exit 1
-echo "${ARG}"
-7z e "${ARG}" -ocbr2tmp
-pushd cbr2tmp
-zip "${FILENAM}.cbz" *
-echo "${FILENAM}.cbz created"
-mv -v "${FILENAM}.cbz" $CWD
-popd
-
-rm -rf cbr2tmp
-echo "Conversion Complete."
+if [[ -d $1 ]]; then
+  find "$1" -name '*.cbr' | while read FILE
+  do
+    file_cbr2cbz
+  done
+elif [[ -f $1 ]]; then
+  FILE="$1"
+  file_cbr2cbz
+else
+    echo "$1 is not valid"
+    exit 1
+fi
